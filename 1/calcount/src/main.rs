@@ -1,30 +1,21 @@
+use itertools::Itertools;
 use std::io::{self, BufRead};
 
 fn main() {
     let stdin = io::stdin();
-    let mut elf = 0;
-    let mut highest_elf = 0;
-    let mut highest_total = 0;
-    let mut running_total = 0;
-    let mut totals = vec![];
-    
-    for line in stdin.lock().lines() {
-	match line.expect("string").parse::<i32>() {
-	    Ok(i) => {
-		running_total += i;
-	    },
-	    Err(_s) => {
-		elf += 1;
-		totals.push(running_total);
-		if running_total > highest_total {
-		    highest_total = running_total;
-		    highest_elf = elf;
-		}
-		running_total = 0;
-	    },
-	} 
-    }
-    println!("{} {}", highest_elf, highest_total);
+    let elfs = stdin
+        .lock()
+        .lines()
+        .group_by(|line| line.as_ref().expect("string").len() == 0);
+    let mut totals = elfs
+        .into_iter()
+        .filter(|(k, _)| !k)
+        .map(|(_, elf)| {
+            elf.map(|line| line.expect("string").parse::<i32>().expect("int"))
+                .sum::<i32>()
+        })
+        .collect_vec();
     totals.sort();
+    println!("{}", totals.iter().rev().take(1).sum::<i32>());
     println!("{}", totals.iter().rev().take(3).sum::<i32>());
 }
