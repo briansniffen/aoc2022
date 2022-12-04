@@ -10,10 +10,10 @@ fn priority(item: u8) -> u8 {
     }
 }
 
-fn ruck_set(v: Vec<u8>) -> HashSet<u8> {
+fn ruck_set(v: &[u8]) -> HashSet<u8> {
     let mut h = HashSet::new();
     for b in v {
-        h.insert(b);
+        h.insert(*b);
     }
     return h;
 }
@@ -26,11 +26,11 @@ fn main() {
         .map(|line| {
             let mut left: Vec<u8> = line.unwrap().bytes().collect();
             let right = left.split_off(left.len() / 2);
-            let left_set = ruck_set(left);
-            let right_set = ruck_set(right);
-            let common: Vec<&u8> = left_set.intersection(&right_set).collect();
+            let left_set = ruck_set(&left);
+            let right_set = ruck_set(&right);
+            let common: Vec<u8> = left_set.intersection(&right_set).copied().collect();
             assert_eq!(common.len(), 1);
-            return priority(**common.iter().next().unwrap()) as u32;
+            return priority(common[0]) as u32;
         })
         .sum();
     println!("{}", prio);
