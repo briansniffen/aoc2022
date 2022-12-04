@@ -38,7 +38,7 @@ fn main() {
                 .intersection(&sets[2])
                 .copied()
                 .collect();
-            return priority(*badge.iter().next().unwrap()) as u32;
+            return priority(badge[0]) as u32;
         })
         .sum();
     println!("{}", prio);
