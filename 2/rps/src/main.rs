@@ -51,12 +51,8 @@ fn parse2(c: Option<char>) -> Game {
 
 // game state for player a
 fn game(a: RPS, b: RPS) -> Game {
-    return match a as i32 - b as i32 {
-        0 => Game::Draw,
-        -2 => Game::Win,
-        1 => Game::Win,
-        _ => Game::Lose,
-    };
+    let win = num::FromPrimitive::from_i32(((a as i32 - b as i32 + 4) % 3) * 3).unwrap();
+    return win;
 }
 
 fn play_vs(need: Game, them: RPS) -> RPS {
