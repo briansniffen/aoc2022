@@ -61,7 +61,6 @@ fn input_file(s: &str) -> IResult<&str, (Stacks, Vec<Command>)> {
     let (s, (rows, num, _, cmds)) =
         all_consuming(tuple((many1(row), num_row, newline, many1(command))))(s)?;
 
-    // 'X' is a witness for char
     let mut stacks: Stacks = vec![vec![]; num];
     for row in rows.iter().rev() {
         for (i, x) in row.iter().enumerate() {
