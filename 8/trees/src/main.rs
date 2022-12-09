@@ -1,3 +1,5 @@
+use itertools::Either;
+
 fn print_vis<T>(vis: &[T])
 where
     T: AsRef<[bool]>,
@@ -20,39 +22,25 @@ where
 {
     let scale = input.len();
     let mut scenic = 1;
-    let mut count = 0;
     let reference = input[x].as_ref()[y];
-    for i in (0..x).rev() {
-        count += 1;
-        if input[i].as_ref()[y] >= reference {
-            break;
+    let dirs = [(true, true), (true, false), (false, true), (false, false)];
+    for (swap_ij, lower_side) in dirs {
+        let mut count = 0;
+        let center = if swap_ij { y } else { x };
+        let range = if lower_side {
+            Either::Left((0..center).rev())
+        } else {
+            Either::Right(center + 1..scale)
+        };
+        for i in range {
+            count += 1;
+            let (a, b) = if swap_ij { (x, i) } else { (i, y) };
+            if input[a].as_ref()[b] >= reference {
+                break;
+            }
         }
+        scenic *= count;
     }
-    scenic *= count;
-    count = 0;
-    for i in x + 1..scale {
-        count += 1;
-        if input[i].as_ref()[y] >= reference {
-            break;
-        }
-    }
-    scenic *= count;
-    count = 0;
-    for j in (0..y).rev() {
-        count += 1;
-        if input[x].as_ref()[j] >= reference {
-            break;
-        }
-    }
-    scenic *= count;
-    count = 0;
-    for j in y + 1..scale {
-        count += 1;
-        if input[x].as_ref()[j] >= reference {
-            break;
-        }
-    }
-    scenic *= count;
     scenic as u32
 }
 
@@ -63,40 +51,21 @@ fn main() {
         .collect();
     let scale = input[0].len();
     let mut vis = vec![vec![false; scale]; scale];
-    for i in 0..scale {
-        // from the west
-        let mut max = 0;
-        for j in 0..scale {
-            let cell = input[i][j];
-            vis[i][j] |= cell > max;
-            max = if cell > max { cell } else { max };
-        }
-    }
-    for i in 0..scale {
-        // from the esat
-        let mut max = 0;
-        for j in (0..scale).rev() {
-            let cell = input[i][j];
-            vis[i][j] |= cell > max;
-            max = if cell > max { cell } else { max };
-        }
-    }
-    for j in 0..scale {
-        // from the north
-        let mut max = 0;
-        for i in 0..scale {
-            let cell = input[i][j];
-            vis[i][j] |= cell > max;
-            max = if cell > max { cell } else { max };
-        }
-    }
-    for j in 0..scale {
-        // from the south
-        let mut max = 0;
-        for i in (0..scale).rev() {
-            let cell = input[i][j];
-            vis[i][j] |= cell > max;
-            max = if cell > max { cell } else { max };
+    let dirs = [(true, true), (true, false), (false, true), (false, false)];
+    for (swap_ij, rev_inner) in dirs {
+        for a in 0..scale {
+            let mut max = 0;
+            let range = if rev_inner {
+                Either::Left(0..scale)
+            } else {
+                Either::Right((0..scale).rev())
+            };
+            for b in range {
+                let (i, j) = if swap_ij { (a, b) } else { (b, a) };
+                let cell = input[i][j];
+                vis[i][j] |= cell > max;
+                max = if cell > max { cell } else { max };
+            }
         }
     }
     for i in 0..scale {
