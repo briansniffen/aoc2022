@@ -56,25 +56,9 @@ fn parse_dir(c: char) -> Point {
     }
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
-    let mut head = Point { x: 0, y: 0 };
-    let mut tail = Point { x: 0, y: 0 };
+fn walk_rope(input: &str, length: usize) {
     let mut trail = HashSet::new();
-    for line in input.lines() {
-        let count = line[2..].parse::<i32>().expect("int");
-        let dir = parse_dir(line.chars().nth(0).unwrap());
-        for _i in 0..count {
-            head = head + dir;
-            if tail.distance(head) > 1 {
-                tail.move_towards(head);
-            }
-            trail.insert(tail);
-        }
-    }
-    println!("{}", trail.len());
-    let mut knots = vec![Point { x: 0, y: 0 }; 10];
-    trail.clear();
+    let mut knots = vec![Point { x: 0, y: 0 }; length+1];
     for line in input.lines() {
         let count = line[2..].parse::<i32>().expect("int");
         let dir = parse_dir(line.chars().nth(0).unwrap());
@@ -86,8 +70,14 @@ fn main() {
                     knots[i].move_towards(dest);
                 }
             }
-            trail.insert(knots[9]);
+            trail.insert(knots[length]);
         }
     }
     println!("{}", trail.len());
+}
+
+fn main() {
+    let input = include_str!("../input.txt");
+    walk_rope(&input, 1);
+    walk_rope(&input, 9);
 }
