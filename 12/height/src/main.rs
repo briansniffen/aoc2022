@@ -63,7 +63,9 @@ fn main() {
             if new_x >= rows || new_y >= cols {
                 continue;
             }
-            if (map[new_x][new_y] >= (map[x][y] - 1)) && (dist[new_x][new_y] > cost + 1) {
+            if (map[new_x][new_y] >= (map[x][y] - 1)) // inverted from part 1
+		&& (dist[new_x][new_y] > cost + 1)
+            {
                 dist[new_x][new_y] = cost + 1;
                 heap.push((cost + 1, new_x, new_y));
             }
@@ -81,7 +83,6 @@ fn main() {
                     end_y = col;
                     end = score;
                 }
-                //                println!("{}", dist[row][col]);
             }
         }
     }
