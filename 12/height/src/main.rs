@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
 fn find_pos(input: &[u8], target: u8, cols: usize) -> (usize, usize) {
@@ -23,9 +24,9 @@ fn main() {
     let mut dist: Vec<Vec<u32>> = vec![vec![u32::MAX; cols]; rows];
     dist[start_x][start_y] = 0;
     let mut heap = BinaryHeap::new();
-    heap.push((0u32, start_x, start_y));
+    heap.push(Reverse((0u32, start_x, start_y)));
     let directions = [(1, 0), (-1, 0), (0, 1), (0, -1)];
-    while let Some((cost, x, y)) = heap.pop() {
+    while let Some(Reverse((cost, x, y))) = heap.pop() {
         if cost > dist[x][y] {
             continue;
         }
@@ -37,7 +38,7 @@ fn main() {
             }
             if (map[new_x][new_y] <= (1 + map[x][y])) && (dist[new_x][new_y] > cost + 1) {
                 dist[new_x][new_y] = cost + 1;
-                heap.push((cost + 1, new_x, new_y));
+                heap.push(Reverse((cost + 1, new_x, new_y)));
             }
         }
     }
@@ -51,9 +52,9 @@ fn main() {
     let mut dist: Vec<Vec<u32>> = vec![vec![u32::MAX; cols]; rows];
     dist[start_x][start_y] = 0;
     let mut heap = BinaryHeap::new();
-    heap.push((0u32, start_x, start_y));
+    heap.push(Reverse((0u32, start_x, start_y)));
     let directions = [(1, 0), (-1, 0), (0, 1), (0, -1)];
-    while let Some((cost, x, y)) = heap.pop() {
+    while let Some(Reverse((cost, x, y))) = heap.pop() {
         if cost > dist[x][y] {
             continue;
         }
@@ -67,7 +68,7 @@ fn main() {
 		&& (dist[new_x][new_y] > cost + 1)
             {
                 dist[new_x][new_y] = cost + 1;
-                heap.push((cost + 1, new_x, new_y));
+                heap.push(Reverse((cost + 1, new_x, new_y)));
             }
         }
     }
