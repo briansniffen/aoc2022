@@ -104,8 +104,8 @@ impl Arena {
             count += 1;
             let mut grain = self.origin.clone();
             while self.pt(grain.x, grain.y) == b'.' {
-                if grain.y == self.max_row {
-                    return count - 1;
+                if grain.y == self.max_row+2 {
+                    return count - 1; // part 1
                 };
                 if self.pt(grain.x, grain.y + 1) == b'.' {
                     grain = Point {
@@ -124,36 +124,8 @@ impl Arena {
                     };
                 } else {
                     *self.pt_mut(grain.x, grain.y) = b'o';
-                }
-            }
-        }
-    }
-
-    fn simulate_sand2(&mut self) -> usize {
-        let mut count = 0;
-        loop {
-            count += 1;
-            let mut grain = self.origin.clone();
-            while self.pt(grain.x, grain.y) == b'.' {
-                if self.pt(grain.x, grain.y + 1) == b'.' {
-                    grain = Point {
-                        x: grain.x,
-                        y: grain.y + 1,
-                    };
-                } else if self.pt(grain.x - 1, grain.y + 1) == b'.' {
-                    grain = Point {
-                        x: grain.x - 1,
-                        y: grain.y + 1,
-                    };
-                } else if self.pt(grain.x + 1, grain.y + 1) == b'.' {
-                    grain = Point {
-                        x: grain.x + 1,
-                        y: grain.y + 1,
-                    };
-                } else {
-                    *self.pt_mut(grain.x, grain.y) = b'o';
                     if grain == self.origin {
-                        return count;
+                        return count; // part 2
                     };
                 }
             }
@@ -172,9 +144,9 @@ fn main() {
     for path in &paths {
         arena.petrify(path);
     }
-    arena.display();
+    //arena.display();		
     let count = arena.simulate_sand();
-    arena.display();
+    //arena.display();
     println!("{count}");
 
     let mut arena = Arena::new(max_row, 300, 700);
@@ -182,8 +154,8 @@ fn main() {
         arena.petrify(path);
     }
     arena.petrify_floor();
-    arena.display();
-    let count = arena.simulate_sand2();
-    arena.display();
+    //arena.display();
+    let count = arena.simulate_sand();
+    //arena.display();
     println!("{count}");
 }
