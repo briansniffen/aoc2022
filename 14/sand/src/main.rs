@@ -62,8 +62,6 @@ fn path_from(a: &Point, b: &Point) -> Vec<Point> {
 
 impl Arena {
     fn new(max_row: usize, min_col: usize, max_col: usize) -> Self {
-        let min_col = 300;
-        let max_col = 700;
         let arena = vec![vec![b'.'; max_col - min_col + 5]; max_row + 3];
         Arena {
             origin: Point { x: 500, y: 0 }, // x is col and so goes *second*
@@ -179,7 +177,7 @@ fn main() {
     arena.display();
     println!("{count}");
 
-    let mut arena = Arena::new(max_row, min_col, max_col);
+    let mut arena = Arena::new(max_row, 300, 700);
     for path in &paths {
         arena.petrify(path);
     }
