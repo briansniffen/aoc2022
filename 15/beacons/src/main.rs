@@ -22,19 +22,33 @@ impl Point {
     fn distance(&self, other: Point) -> i32 {
         (self.x - other.x).abs() + (self.y - other.y).abs()
     }
+    fn tuning_freq(&self) -> i64 {
+        (self.x as i64) * 4000000 + (self.y as i64)
+    }
 }
 
 impl Zone {
     fn contains(&self, pt: Point) -> bool {
-        self.sensor.distance(pt) <= self.sensor.distance(self.beacon)
+        self.sensor.distance(pt) <= self.radius()
     }
     fn min(&self) -> i32 {
-        let dist = self.sensor.distance(self.beacon);
-        self.sensor.x - dist
+        self.sensor.x - self.radius()
     }
     fn max(&self) -> i32 {
-        let dist = self.sensor.distance(self.beacon);
-        self.sensor.x + dist
+        self.sensor.x + self.radius()
+    }
+    fn radius(&self) -> i32 {
+        self.sensor.distance(self.beacon)
+    }
+    fn slice(&self, y: i32) -> Option<(i32, i32)> {
+        if y < self.sensor.y - self.radius() || y > self.sensor.y + self.radius() {
+            None
+        } else {
+            let offset = self.radius() - (self.sensor.y - y).abs();
+            let low = self.sensor.x - offset;
+            let high = self.sensor.x + offset;
+            Some((low, high))
+        }
     }
 }
 
@@ -78,25 +92,33 @@ fn part1(zones: &Vec<Zone>, y: i32) -> i32 {
 }
 
 fn part2(zones: &Vec<Zone>, max: i32) -> Point {
-    for x in 0..=max {
-        for y in 0..=max {
-            let pt = Point { x, y };
-            if zones.iter().any(|z| z.sensor == pt || z.beacon == pt) {
+    for y in 0..=max {
+        for (low_bound, _high_bound) in zones.iter().filter_map(|z| z.slice(y)) {
+            if low_bound <= 1 || low_bound >= max {
                 continue;
+            }
+            let pt = Point {
+                x: low_bound - 1,
+                y,
             };
-            if zones.iter().any(|z| z.contains(pt)) {
-                continue;
-            };
-            return pt;
+            if !zones.iter().any(|z| z.contains(pt)) {
+                return pt;
+            }
         }
     }
     return Point { x: 0, y: 0 };
 }
 
 fn main() {
+    let input = include_str!("../test");
+    let (rest, sensors) = parse_sensors(input).unwrap();
+    assert_eq!(rest, "");
+    println!("test 1 {}", part1(&sensors, 10));
+    println!("test 2 {:?}", part2(&sensors, 20).tuning_freq());
+
     let input = include_str!("../input.txt");
     let (rest, sensors) = parse_sensors(input).unwrap();
     assert_eq!(rest, "");
-    println!("{}", part1(&sensors, 2000000));
-    println!("{:?}", part2(&sensors, 4000000));
+    println!("real 1 {}", part1(&sensors, 2000000));
+    println!("real 2 {:?}", part2(&sensors, 4000000).tuning_freq());
 }
