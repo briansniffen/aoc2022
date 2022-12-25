@@ -1,10 +1,6 @@
-use petgraph::algo::dijkstra;
+use petgraph::algo::floyd_warshall;
 use petgraph::graphmap::GraphMap;
 use petgraph::Directed;
-use rayon::iter::ParallelBridge;
-use rayon::prelude::*;
-//use petgraph::dot::{Dot, Config};
-use itertools::Itertools;
 use regex::Regex;
 use std::collections::HashMap;
 
@@ -28,44 +24,135 @@ fn node_label<'a>(n: u32, valves: &'a HashMap<String, Valve>) -> &'a str {
 }
 
 fn score<'a>(
-    path: &[&&'a str],
+    path: &[&'a str],
     valves: &HashMap<String, Valve>,
-    paths: &HashMap<&'a str, HashMap<&'a str, u32>>,
+    paths: &HashMap<(&'a str, &'a str), u32>,
     time: u32,
 ) -> u32 {
     let mut remaining = time;
     let mut score = 0;
     let mut last = "AA";
     for step in path {
-        let cost = paths[last][*step];
+        if step == &last {
+            continue;
+        }
+        let cost = paths[&(last, *step)];
         if cost > remaining {
             break;
         } else {
             remaining -= cost;
-            score += valves[**step] * remaining;
+            score += valves[*step] * remaining;
             last = step;
         }
     }
     score
 }
 
-fn trunc<'a>(
-    path: &[&&'a str],
-    paths: &HashMap<&'a str, HashMap<&'a str, u32>>,
+fn score2<'a>(
+    path: &[&'a str],
+    valves: &HashMap<String, Valve>,
+    paths: &HashMap<(&'a str, &'a str), u32>,
     time: u32,
-) -> usize {
-    let mut remaining = time;
+) -> (u32, u32) {
+    let mut max = 0;
+    let mut c = 0;
+    for elephant in 1..(path.len() - 1) {
+        let s = score(&path[..elephant], &valves, &paths, time)
+            + score(&path[elephant..], &valves, &paths, time);
+        if s == 2031 {
+            dbg!(elephant);
+        };
+        if s > max {
+            max = s;
+            c = std::cmp::min(
+                cost(&path[..elephant], &paths),
+                cost(&path[elephant..], &paths),
+            )
+        };
+    }
+    (c, max)
+}
+
+fn cost<'a>(path: &[&'a str], paths: &HashMap<(&'a str, &'a str), u32>) -> u32 {
+    let mut total = 0;
     let mut last = "AA";
-    for (i, step) in path.iter().enumerate() {
-        let cost = paths[last][*step];
-        if cost > remaining {
-            return i;
+    for step in path.iter() {
+        if *step == last {
+            continue;
+        }
+        total += paths[&(last, *step)];
+        last = step;
+    }
+    total
+}
+
+fn explore<'a>(
+    mut path: &mut [&'a str],
+    sorted: &[&'a str],
+    paths: &HashMap<(&'a str, &'a str), u32>,
+    valves: &HashMap<String, Valve>,
+    time: u32,
+    index: usize,
+) -> (u32, Vec<&'a str>) {
+    let mut max = 0;
+    let mut max_path = vec![];
+    for node in sorted.iter().rev() {
+        if path[0..index].contains(node) {
+            continue;
+        }
+        path[index] = node;
+        if index < path.len() - 1
+            && index < sorted.len() - 1
+            && cost(&path[0..=index], &paths) < time
+        {
+            let (score, new_max_path) =
+                explore(&mut path, &sorted, &paths, &valves, time, index + 1);
+            if score > max {
+                max = score;
+                max_path = new_max_path;
+            }
         } else {
-            remaining -= cost;
-            last = step;
+            let score = score(&path[0..=index], &valves, &paths, time);
+            if score > max {
+                max = score;
+                max_path = path[0..=index].to_vec();
+            }
         }
     }
-    path.len()
+    (max, max_path)
+}
+
+fn explore2<'a>(
+    mut path: &mut [&'a str],
+    sorted: &[&'a str],
+    paths: &HashMap<(&'a str, &'a str), u32>,
+    valves: &HashMap<String, Valve>,
+    time: u32,
+    index: usize,
+) -> (u32, Vec<&'a str>) {
+    let mut max = 0;
+    let mut max_path = vec![];
+    for node in sorted.iter().rev() {
+        if path[0..index].contains(node) {
+            continue;
+        }
+        path[index] = node;
+        let (cost, score) = score2(&path[0..=index], &valves, &paths, time);
+        if index < path.len() - 1 && index < sorted.len() - 1 && cost < time {
+            let (score, new_max_path) =
+                explore2(&mut path, &sorted, &paths, &valves, time, index + 1);
+            if score > max {
+                max = score;
+                max_path = new_max_path;
+            }
+        } else {
+            if score > max {
+                max = score;
+                max_path = path[0..=index].to_vec();
+            }
+        }
+    }
+    (max, max_path)
 }
 
 fn main() {
@@ -83,71 +170,33 @@ fn main() {
         }
         valves.insert(cap["label"].to_string(), valve);
     }
-    let mut paths: HashMap<&str, HashMap<&str, u32>> = HashMap::new();
-    for (label, valve) in &valves {
-        if label != "AA" && *valve == 0 {
+    let mut paths = HashMap::new();
+    for ((a, b), cost) in floyd_warshall(&graph, |_| 1).unwrap() {
+        let a = node_label(a, &valves);
+        let b = node_label(b, &valves);
+        if a != "AA" && valves[a] == 0 {
             continue;
         }
-        let dijk = dijkstra(&graph, node_id(&label), None, |_| 1);
-        let mut local_paths: HashMap<&str, u32> = HashMap::new();
-        for (dest, cost) in &dijk {
-            let dest = node_label(*dest, &valves);
-            if dest == label || valves[dest] == 0 {
-                continue;
-            }
-            local_paths.insert(dest, cost + 1); // we only go to a node to turn it on
-        }
-        paths.insert(label, local_paths);
+        paths.insert((a, b), cost + 1); // turn on valves we visit
     }
-    let mut paths_sorted = paths
+    let mut paths_sorted = valves
         .keys()
-        .map(|&x| x)
-        .filter(|&p| p != "AA")
-        .collect::<Vec<_>>();
-    paths_sorted.sort_by_key(|&x| valves[x]);
+        .map(|x| x.as_str())
+        .filter(|&p| p != "AA" && valves[p] > 0)
+        .collect::<Vec<&str>>();
+    paths_sorted.sort_by_key(|x| valves[*x]);
 
     // part 1
-    let max_score = (0..8)
-        .into_par_iter()
-        .map(|i| {
-            paths_sorted
-                .iter()
-                .rev()
-                .permutations(i) // total hack, sorry
-                .par_bridge()
-                .map(|perm| score(&perm[0..trunc(&perm, &paths, 30)], &valves, &paths, 30))
-                .max()
-                .unwrap()
-        })
-        .max()
-        .unwrap();
 
-    println!("part 1: {}", max_score);
+    let mut path = vec!["AA"; 15];
+    let max = explore(&mut path, &paths_sorted, &paths, &valves, 30, 0);
+    println!("part 1: {:?}", max);
 
     // part 2
-    let max_score = (0..12)
-        .into_par_iter()
-        .map(|i| {
-            paths_sorted
-                .iter()
-                .rev()
-                .permutations(i)
-                .par_bridge()
-                .map(|perm| {
-                    (0..perm.len())
-                        .into_iter()
-                        .map(|chunk| {
-                            score(&perm[0..chunk], &valves, &paths, 26)
-                                + score(&perm[chunk..], &valves, &paths, 26)
-                        })
-                        .max()
-                        .unwrap()
-                })
-                .max()
-                .unwrap()
-        })
-        .max()
-        .unwrap();
 
-    println!("part 2: {}", max_score);
+    let mut path = vec!["AA"; 15];
+    let max = explore2(&mut path, &paths_sorted, &paths, &valves, 26, 0);
+    // let mut path2 = vec!["AA"; 15];
+    // let max = explore3(&mut path, &mut path2, &paths_sorted, &paths, &valves, 26, 0);
+    println!("part 2: {:?}", max);
 }
