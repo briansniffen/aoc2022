@@ -48,31 +48,6 @@ fn score<'a>(
     score
 }
 
-fn score2<'a>(
-    path: &[&'a str],
-    valves: &HashMap<String, Valve>,
-    paths: &HashMap<(&'a str, &'a str), u32>,
-    time: u32,
-) -> (u32, u32) {
-    let mut max = 0;
-    let mut c = 0;
-    for elephant in 1..(path.len() - 1) {
-        let s = score(&path[..elephant], &valves, &paths, time)
-            + score(&path[elephant..], &valves, &paths, time);
-        if s == 2031 {
-            dbg!(elephant);
-        };
-        if s > max {
-            max = s;
-            c = std::cmp::min(
-                cost(&path[..elephant], &paths),
-                cost(&path[elephant..], &paths),
-            )
-        };
-    }
-    (c, max)
-}
-
 fn cost<'a>(path: &[&'a str], paths: &HashMap<(&'a str, &'a str), u32>) -> u32 {
     let mut total = 0;
     let mut last = "AA";
@@ -122,37 +97,33 @@ fn explore<'a>(
     (max, max_path)
 }
 
-fn explore2<'a>(
+fn explore_all<'a>(
     mut path: &mut [&'a str],
     sorted: &[&'a str],
     paths: &HashMap<(&'a str, &'a str), u32>,
     valves: &HashMap<String, Valve>,
     time: u32,
     index: usize,
-) -> (u32, Vec<&'a str>) {
-    let mut max = 0;
-    let mut max_path = vec![];
+) -> Vec<(u32, Vec<&'a str>)> {
+    let mut all_paths = vec![];
     for node in sorted.iter().rev() {
         if path[0..index].contains(node) {
             continue;
         }
         path[index] = node;
-        let (cost, score) = score2(&path[0..=index], &valves, &paths, time);
-        if index < path.len() - 1 && index < sorted.len() - 1 && cost < time {
-            let (score, new_max_path) =
-                explore2(&mut path, &sorted, &paths, &valves, time, index + 1);
-            if score > max {
-                max = score;
-                max_path = new_max_path;
-            }
-        } else {
-            if score > max {
-                max = score;
-                max_path = path[0..=index].to_vec();
-            }
+        if index < path.len() - 1
+            && index < sorted.len() - 1
+            && cost(&path[0..=index], &paths) < time
+        {
+            let mut new_paths = explore_all(&mut path, &sorted, &paths, &valves, time, index + 1);
+            all_paths.append(&mut new_paths);
         }
+        // we've hit time
+        let path = path[0..=index].to_vec();
+        let score = score(&path[0..=index], &valves, &paths, time);
+        all_paths.push((score, path));
     }
-    (max, max_path)
+    all_paths
 }
 
 fn main() {
@@ -195,8 +166,22 @@ fn main() {
     // part 2
 
     let mut path = vec!["AA"; 15];
-    let max = explore2(&mut path, &paths_sorted, &paths, &valves, 26, 0);
-    // let mut path2 = vec!["AA"; 15];
-    // let max = explore3(&mut path, &mut path2, &paths_sorted, &paths, &valves, 26, 0);
+    let mut my_paths = explore_all(&mut path, &paths_sorted, &paths, &valves, 26, 0);
+    my_paths.sort_by_key(|&(score, _)| -(score as i64));
+    let elephant_paths = my_paths.clone();
+    let mut max = 0;
+    for (my_score, my_path) in &my_paths {
+        'elephant: for (elephant_score, elephant_path) in &elephant_paths {
+            for element in my_path {
+                if elephant_path.contains(&element) {
+                    continue 'elephant;
+                }
+            }
+            let score = my_score + elephant_score;
+            if score > max {
+                max = dbg!(score);
+            }
+        }
+    }
     println!("part 2: {:?}", max);
 }
