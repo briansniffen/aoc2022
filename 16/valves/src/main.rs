@@ -1,3 +1,4 @@
+use bit_set::BitSet;
 use petgraph::algo::floyd_warshall;
 use petgraph::graphmap::GraphMap;
 use petgraph::Directed;
@@ -166,19 +167,24 @@ fn main() {
     // part 2
 
     let mut path = vec!["AA"; 15];
-    let mut my_paths = explore_all(&mut path, &paths_sorted, &paths, &valves, 26, 0);
+    let mut my_paths: Vec<_> = explore_all(&mut path, &paths_sorted, &paths, &valves, 26, 0)
+        .into_iter()
+        .map(|(score, path)| {
+            let mut bitset = BitSet::new();
+            for element in path {
+                bitset.insert(paths_sorted.iter().position(|x| x == &element).unwrap());
+            }
+            (score, bitset)
+        })
+        .collect();
     my_paths.sort_by_key(|&(score, _)| -(score as i64));
     let elephant_paths = my_paths.clone();
+    dbg!(&elephant_paths.len());
     let mut max = 0;
-    for (my_score, my_path) in &my_paths {
-        'elephant: for (elephant_score, elephant_path) in &elephant_paths {
-            for element in my_path {
-                if elephant_path.contains(&element) {
-                    continue 'elephant;
-                }
-            }
+    for (index, (my_score, my_path)) in my_paths.into_iter().enumerate() {
+        for (elephant_score, elephant_path) in elephant_paths[index..].iter() {
             let score = my_score + elephant_score;
-            if score > max {
+            if score > max && my_path.is_disjoint(&elephant_path) {
                 max = dbg!(score);
             }
         }
