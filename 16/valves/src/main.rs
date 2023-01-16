@@ -179,13 +179,22 @@ fn main() {
         .collect();
     my_paths.sort_by_key(|&(score, _)| -(score as i64));
     let elephant_paths = my_paths.clone();
-    dbg!(&elephant_paths.len());
     let mut max = 0;
     for (index, (my_score, my_path)) in my_paths.into_iter().enumerate() {
+        if max
+            > my_score
+                + elephant_paths[index..]
+                    .iter()
+                    .max_by_key(|x| x.0)
+                    .unwrap()
+                    .0
+        {
+            break;
+        }
         for (elephant_score, elephant_path) in elephant_paths[index..].iter() {
             let score = my_score + elephant_score;
             if score > max && my_path.is_disjoint(&elephant_path) {
-                max = dbg!(score);
+                max = score;
             }
         }
     }
